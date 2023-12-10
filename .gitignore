@@ -1,0 +1,33 @@
+# Ignore CLion project settings
+.idea/
+
+# Ignore CMake build directory
+cmake-build-debug/
+
+# Ignore compiled files
+*.o
+*.out
+*.exe
+*.a
+*.so
+
+# Ignore directories created by CMake
+CMakeFiles/
+CMakeScripts/
+_testing/
+
+# Ignore files created by CMake
+CMakeCache.txt
+CMakeLists.txt.user
+cmake_install.cmake
+
+# Ignore files created by Make
+Makefile
+build/
+
+# Ignore any core dump files
+core.*
+
+# macOS specific
+.DS_Store
+*.swp
