@@ -19,9 +19,7 @@ int main() {
     int firstNumber = -1;
     int lastNumber = -1;
 
-    char written_number[128];
-    short wn_index = 0;
-    short final_letter_of_digit_index = 0;
+    short examine_from = 0;
 
     for (int i = 0; line_buffer[i] != '\0'; i++) {
       if (isdigit(line_buffer[i])) {
@@ -30,21 +28,22 @@ int main() {
         }
         lastNumber = line_buffer[i] - '0';
       } else {
-        written_number[wn_index] = line_buffer[i];
-        wn_index++;
-
-        Number string_as_number =
-            mapStringToNumber(written_number + final_letter_of_digit_index);
+        char written_digit[i];
+        memcpy(written_digit, line_buffer + examine_from,
+               (i + 1) * sizeof(char));
+        printf("EXAMINING %s\n", written_digit);
+        Number string_as_number = mapStringToNumber(written_digit);
 
         if (string_as_number != UNKNOWN) {
           int readNumber = number_as_digit(string_as_number);
+          printf("FOUND NUMBER %d\n", readNumber);
 
           if (firstNumber == -1) {
             firstNumber = readNumber;
           }
 
           lastNumber = readNumber;
-          final_letter_of_digit_index = wn_index - 1;
+          examine_from = i - 1;
         }
       }
 
@@ -52,9 +51,6 @@ int main() {
         break;
       }
     }
-
-    memset(written_number, 0, sizeof(written_number));
-    wn_index = 0;
 
     printf("Adding numbers %d for line %s\n", firstNumber * 10 + lastNumber,
            line_buffer);
