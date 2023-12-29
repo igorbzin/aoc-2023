@@ -21,25 +21,20 @@ fn main() {
             match above_line_information {
                 Some(line_above) => {
                     match check_line(&line_above.number_indices, *special_character) {
-                        Ok(found_above) => {
+                        Some(found_above) => {
                             found_above.iter().for_each(|(first_index, second_index)| {
                                 if let Some(again) =
                                     lines.get(line_number.wrapping_sub(1)).and_then(|test| {
                                         println!("ABOVE LINE {test}");
-                                        extract_number(
-                                            test,
-                                            *first_index as usize,
-                                            *second_index as usize,
-                                        )
-                                        .ok()
+                                        extract_number(test, *first_index, *second_index).ok()
                                     })
                                 {
                                     adjacent_numbers.push(again);
                                 }
                             });
                         }
-                        Err(e) => {
-                            println!("Error {e}");
+                        None => {
+                            println!("Error");
                         }
                     }
                 }
@@ -48,35 +43,35 @@ fn main() {
 
             //current line
             match check_line(&line_information.number_indices, *special_character) {
-                Ok(found_current_line) => {
+                Some(found_current_line) => {
                     found_current_line
                         .iter()
                         .for_each(|(first_index, second_index)| {
                             if let Some(again) = lines.get(line_number).and_then(|test| {
                                 println!("CURRENT LINE {test}");
-                                extract_number(test, *first_index as usize, *second_index as usize)
+                                extract_number(test, *first_index, *second_index)
                                     .ok()
                             }) {
                                 adjacent_numbers.push(again);
                             }
                         })
                 }
-                Err(e) => {
-                    println!("Error {e}");
+                None => {
+                    println!("Error");
                 }
             }
 
             match below_line_information {
                 Some(line_below) => {
                     match check_line(&line_below.number_indices, *special_character) {
-                        Ok(found_below) => {
+                        Some(found_below) => {
                             found_below.iter().for_each(|(first_index, second_index)| {
                                 if let Some(again) = lines.get(line_number + 1).and_then(|test| {
                                     println!("BELOW LINE {test}");
                                     extract_number(
                                         test,
-                                        *first_index as usize,
-                                        *second_index as usize,
+                                        *first_index,
+                                        *second_index,
                                     )
                                     .ok()
                                 }) {
@@ -84,8 +79,8 @@ fn main() {
                                 }
                             })
                         }
-                        Err(e) => {
-                            println!("Error {e}");
+                        None => {
+                            println!("Error");
                         }
                     }
                 }
@@ -123,8 +118,8 @@ fn extract_number(s: &str, start_idx: usize, end_idx: usize) -> Result<i32, Stri
         .map_err(|e| format!("Failed to parse '{}': {}", substring, e))
 }
 
-fn check_line(indices: &Vec<(i32, i32)>, character_idx: i32) -> Result<Vec<(i32, i32)>, String> {
-    let mut adjacent_numbers: Vec<(i32, i32)> = vec![];
+fn check_line(indices: &Vec<(usize, usize)>, character_idx: usize) -> Option<Vec<(usize, usize)>> {
+    let mut adjacent_numbers: Vec<(usize, usize)> = vec![];
 
     let number_indices_str = indices
         .iter()
@@ -135,40 +130,43 @@ fn check_line(indices: &Vec<(i32, i32)>, character_idx: i32) -> Result<Vec<(i32,
     println!("Examining special character with idx {character_idx} alongside indices {number_indices_str}");
 
     for &(first_idx, last_idx) in indices.iter() {
-        if (character_idx >= first_idx - 1) && (character_idx <= last_idx + 1) {
+        if (character_idx >= first_idx.wrapping_sub(1)) && (character_idx <= last_idx + 1) {
             adjacent_numbers.push((first_idx, last_idx));
         }
     }
 
     if adjacent_numbers.len() > 2 {
-        Err("The character already has another adjacent number".to_string())
+        None
     } else {
-        Ok(adjacent_numbers)
+        Some(adjacent_numbers)
     }
 }
 
 fn process_line(line_to_examine: Option<&String>) -> LineInformation {
-    let mut number_indices: Vec<(i32, i32)> = Vec::new();
-    let mut special_characters: Vec<i32> = Vec::new();
+    let mut number_indices: Vec<(usize, usize)> = Vec::new();
+    let mut special_characters: Vec<usize> = Vec::new();
 
     if let Some(line) = line_to_examine {
-        let mut first_digit_idx: i32 = -1;
+        let mut first_digit_idx: Option<usize> = None;
         for n in 0..line.len() {
             let character = line.chars().nth(n).expect("Not a valid character index");
-            if character.is_numeric() && first_digit_idx == -1 {
-                first_digit_idx = n as i32;
+            if character.is_numeric() && first_digit_idx == None {
+                first_digit_idx = Some(n);
                 if !line.chars().nth(n + 1).unwrap_or('.').is_numeric() {
-                    number_indices.push((n as i32, n as i32));
-                    first_digit_idx = -1;
+                    number_indices.push((n, n));
+                    first_digit_idx = None;
                 }
-            } else if character.is_numeric() && first_digit_idx != -1 {
+            } else if character.is_numeric() && first_digit_idx != None {
                 if n + 1 < line.len() && line.chars().nth(n + 1).unwrap_or('.').is_numeric() {
                     continue;
                 }
-                number_indices.push((first_digit_idx, n.try_into().unwrap()));
-                first_digit_idx = -1;
+
+                if let Some(idx) = first_digit_idx {
+                    number_indices.push((idx, n.try_into().unwrap()));
+                }
+                first_digit_idx = None;
             } else if character == '*' {
-                special_characters.push(n as i32);
+                special_characters.push(n);
             }
         }
     }
@@ -176,13 +174,13 @@ fn process_line(line_to_examine: Option<&String>) -> LineInformation {
 }
 
 struct LineInformation {
-    number_indices: Vec<(i32, i32)>,
-    special_characters: Vec<i32>,
+    number_indices: Vec<(usize, usize)>,
+    special_characters: Vec<usize>,
 }
 
 impl LineInformation {
     // Constructor for MyClass with parameters
-    fn new(indices: Vec<(i32, i32)>, integers: Vec<i32>) -> Self {
+    fn new(indices: Vec<(usize, usize)>, integers: Vec<usize>) -> Self {
         LineInformation {
             number_indices: indices,
             special_characters: integers,
